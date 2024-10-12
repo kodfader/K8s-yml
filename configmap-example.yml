@@ -1,0 +1,15 @@
+---
+apiVersion: v1                   # The ConfigMap object belongs to the core Kubernetes API group (version v1).
+kind: ConfigMap                  # Defines the object as a ConfigMap.
+metadata:                        # Provides metadata like the name of the ConfigMap (example-configmap).
+  name: example-configmap
+data:                            # This section contains key-value pairs that can be consumed by Pods. In this example:
+  # Simple key-value pairs
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  
+  # More complex data, like a configuration file
+  database-config: |             # contains a block of YAML text, which could represent a configuration file.
+    db_name: myapp
+    db_user: root
+    db_pass: password123

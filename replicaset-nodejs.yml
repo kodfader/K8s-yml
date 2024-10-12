@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1                # Specifies the API version for ReplicaSets.
+kind: ReplicaSet                   # Defines the object as a ReplicaSet.
+metadata:                          # Includes the name of the ReplicaSet (nodejs-app-replicaset) and a label (app: nodejs-app).
+  name: nodejs-app-replicaset
+  labels:
+    app: nodejs-app
+spec:
+  replicas: 3                     # Ensures 3 replicas of the Pod, pecifies that 3 replicas of the Pod should be running at all times.
+  selector:                       # Matches the Pods that should be managed by this ReplicaSet. In this case, it matches Pods labeled app: nodejs-app.
+    matchLabels:
+      app: nodejs-app
+  template:                       # Defines the template for the Pods managed by the ReplicaSet, similar to a standalone Pod definition:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      containers:                 # efines the container using the node:lts-alpine image.
+      - name: nodejs-app-container
+        image: node:lts-alpine
+        ports:
+        - containerPort: 3000
+        command: ["node", "-e", "require('http').createServer((req, res) => res.end('Hello from ReplicaSet')).listen(3000)"]
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10

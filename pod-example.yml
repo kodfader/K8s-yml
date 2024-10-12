@@ -1,0 +1,12 @@
+apiVersion: v1    # Specifies the version of the Kubernetes API you're using.
+kind: Pod         # Defines that you're creating a Pod object.
+metadata:         # Provides basic information about the Pod, like its name and labels.
+  name: my-nginx-pod  # This is the name of the Pod.
+  labels:         # Adds labels to the Pod for grouping, searching, or selecting.
+    app: web
+spec:             # Defines the container configuration.
+  containers:     # Lists the containers that will run inside the Pod. This Pod has one container.
+  - name: nginx-container  # The name of the container.
+    image: nginx:1.21      # Specifies the Nginx image version to use from Docker Hub.
+    ports:        # Exposes port 80 on the container to handle HTTP traffic.
+    - containerPort: 80

@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1             # Specifies the API version for Deployments.
+kind: Deployment                # Defines the object as a Deployment.
+metadata:                       # Includes the name of the Deployment (nodejs-app-deployment) and a label (app: nodejs-app).
+  name: nodejs-app-deployment
+  labels:
+    app: nodejs-app
+spec:
+  replicas: 3  # Create 3 replicas of the Pod , Defines how many Pods should run (3 in this case).
+  selector:    # Specifies which Pods this Deployment manages, by matching the app: nodejs-app label.
+    matchLabels:
+      app: nodejs-app
+  template:    # Describes the Pod that will be created by the Deployment. This section looks similar to a Pod definition:
+    metadata:
+      labels:
+        app: nodejs-app
+    spec:
+      containers: # Defines the container running the node:lts-alpine image.
+      - name: nodejs-app-container
+        image: node:lts-alpine
+        ports:
+        - containerPort: 3000
+        command: ["node", "-e", "require('http').createServer((req, res) => res.end('Hello, Kubernetes')).listen(3000)"]
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+# Service to expose the Deployment internally within the cluster
+apiVersion: v1
+kind: Service                 # Defines the object as a Service.
+metadata:                     # Specifies the name of the Service (nodejs-app-service).
+  name: nodejs-app-service
+spec:
+  selector:                   # Selects the Pods labeled app: nodejs-app.
+    app: nodejs-app
+  ports:                      # Exposes the Service on port 80 and routes traffic to port 3000 of the container.
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP  # Internal access only, Limits the Service to be accessible within the cluster.
