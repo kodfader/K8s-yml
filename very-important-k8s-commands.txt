@@ -1,0 +1,157 @@
+Logs and Events: Check the logs of the kubelet and events related to the pod for more detailed error messages. You can view events with:
+kubectl get events --sort-by='.metadata.creationTimestamp'
+ --
+kubectl scale replicaset --replicas=
+kubectl scale deployment --replicas=
+ --
+Decoding the Secret Data (Optional):
+
+If you want to see the actual values stored in the Secret (e.g., for troubleshooting), you can retrieve and decode them:
+kubectl get secret db-secret -o jsonpath='{.data.username}' | base64 --decode
+ --
+Extract All Data from a Secret:
+kubectl get secret <secret-name> -o jsonpath='{.data}' | jq -r 'to_entries[] | .key + "=" + (.value | @base64d)'
+ --
+Inline Secret Check with Environment Variables: [ Check if a pod's environment variables have the correct values as defined in a Secret. ]
+kubectl exec <pod-name> -- env | grep $(kubectl get secret <secret-name> -o jsonpath='{.data.<key>}' | base64 --decode)
+ --
+Create a secret from literal
+kubectl create secret generic my-secret --from-literal=username=admin --from-literal=password=password
+ --
+Getting Pods state [ Running, Pending, Succeeded, Failed and Unknown ]
+kubectl get pods -n  -o jsonpath='{.items[*].status.phase}'
+ --
+View the contents of a specific secret (base64 decoded):
+kubectl get secret  -n  -o jsonpath='{.data}' | jq 'map_values(@base64d)'
+
+In order to get individual key within the secret
+kubectl get secret <secret-name> -o jsonpath='{.data.<key>}' | base64 --decode
+ --
+View the contents of a specific ConfigMap:
+   kubectl get configmap  -n  -o yaml
+ --
+Check ConfigMap Data Inline: [ This command formats and displays all the data in a ConfigMap as readable JSON. ]
+kubectl get configmap <configmap-name> -o jsonpath='{.data}' | jq .
+ --
+Get the current context and cluster information: 
+kubectl config current-context
+kubectl cluster-info
+ --
+Check the status of all resources in a namespace: [ gets all pods, services, deployments and replicaset within a specific NS]
+kubectl get all -n 
+ --
+Execute a command in a running pod (for debugging):
+kubectl exec -it  -n  -- /bin/sh
+ --
+More info like node and IP on pods
+kubectl get pods -o wide  
+ --
+Checking logs for specific container in a pod   
+kubectl logs <pod-name> -c <container-name>  
+
+Stream logs (follow mode)
+kubectl logs -f <pod-name> 
+ --
+Open a shell in a container
+kubectl exec -it <pod-name> -- /bin/sh
+kubectl exec -it <pod-name> --namespace=<namespace> -- /bin/bash
+ --
+Check Resource Utilization (CPU, memory): [ Requires metrics-server ]
+kubectl top pod <pod-name>  
+ --
+Check Endpoint(s) of the Service:
+kubectl get endpoints <service-name>
+ --
+Test Service Reachability (from within cluster):
+kubectl exec -it <pod-name> -- curl <service-name>:<port>
+ --
+Check Load Balancer: [ Shows external IPs for LoadBalancer service type ]
+kubectl get svc <service-name> -o wide  
+ --
+Check if Pod Can Access the Secret:
+kubectl describe pod <pod-name> | grep -A5 'Secret'
+ --
+Apply Changes Without Restart: [ If you need to update ConfigMap without restarting the pod ]
+kubectl apply -f <configmap-file>.yaml
+kubectl rollout restart deployment <deployment-name>
+ --
+Inspect Kubernetes Resources in JSON/YAML Format:
+kubectl get pod <pod-name> -o yaml
+kubectl get svc <service-name> -o json
+ --
+Debug DNS Resolution:
+kubectl run -it --rm --image=busybox dns-test -- nslookup <service-name>
+ --
+kubectl run -it --rm --image=busybox dns-test -- nslookup <service-name>
+ --
+Port Forwarding for Debugging:
+kubectl port-forward <pod-name> <local-port>:<pod-port>
+ --
+Check for Pod Scheduling Issues:
+kubectl describe pod <pod-name> | grep -A10 "Events"
+kubectl describe pod <pod-name> | grep -i "FailedScheduling"
+ --
+Debug Pod Network Issues Using Busybox: [ Launch a temporary busybox pod in the same namespace to test network connectivity ]
+kubectl run busybox --image=busybox --rm -it --restart=Never -- /bin/sh
+# Then inside the shell, test connectivity
+nslookup <service-name>        # Check DNS resolution
+curl <service-name>:<port>     # Check service reachability
+ --
+Troubleshoot Container Runtime Issues (e.g., CrashLoopBackOff):
+kubectl describe pod <pod-name> | grep -i "container status" -A10
+kubectl logs <pod-name> --previous            # Logs from the previous container if it crashed
+kubectl get events --sort-by='.lastTimestamp' # Sort events by time to see recent failures
+ --
+Debug Environment Variables in a Pod:
+kubectl exec <pod-name> -- env | grep <specific-env-variable>
+kubectl describe pod <pod-name> | grep -A5 "Environment"
+ --
+Identify the Endpoint IPs for a Service: [ This will output the IPs of all the pods backing the service, helping to ensure proper pod-to-service binding. ]
+kubectl get endpoints <service-name> -o jsonpath='{.subsets[*].addresses[*].ip}'
+ --
+Trace a Service's Load Balancer Ingress: [ For services exposed via LoadBalancer, this command extracts the external IPs to ensure proper external traffic routing. ]
+kubectl get svc <service-name> -o jsonpath='{.status.loadBalancer.ingress[*].ip}'
+ --
+Debug Service-to-Pod Connectivity: [ You can run a debug container on a node where the service is deployed and check reachability: ]
+kubectl run net-debug --image=busybox --rm -it --restart=Never -- /bin/sh
+curl <pod-ip>:<port>    # Directly test reachability to a Pod
+curl <service-name>:<port>    # Test connectivity through the service
+ --
+Identify Pods by Node and Namespace: [ This command lists all pods running on a specific node, useful when debugging node-level issues. ]
+kubectl get pods -o=custom-columns=NODE:.spec.nodeName,NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --all-namespaces | grep <node-name>
+ --
+Check if Pods Are Evenly Spread Across Nodes (Anti-Affinity Issues): [ This counts the number of pods per node, helping detect uneven pod distribution. ]
+kubectl get pods -o wide --all-namespaces | awk '{print $7}' | sort | uniq -c | sort -nr
+ --
+Analyze System-Level Metrics (e.g., CPU/Memory per Node):
+kubectl top nodes | sort -k3 -nr               # Sort by memory usage (descending)
+kubectl top nodes | sort -k2 -nr               # Sort by CPU usage (descending)
+ --
+Fetch Logs Across All Pods in a Namespace and Filter by Error Level: [ This fetches logs from all pods with a given label in a namespace, and filters for error-level log entries. ]
+kubectl logs -l app=<label> -n <namespace> --tail=50 | grep "ERROR"
+ --
+Multi-Container Log Fetch with Filtering: [ Fetch logs from all containers in a multi-container pod and filter based on a custom pattern. ]
+kubectl logs <pod-name> --all-containers=true | grep "pattern"
+ --
+Stream Logs from All Pods Matching a Label: [ Continuously stream logs from all pods with a specific label. ]
+kubectl logs -l app=<app-label> --all-containers=true -f
+ --
+Troubleshooting PersistentVolume and PersistentVolumeClaim
+Check PVC Status and Binding: [ This command retrieves the status and associated PersistentVolume for a given PersistentVolumeClaim. ]
+kubectl get pvc <pvc-name> -o=jsonpath='{.status.phase} {.spec.volumeName}'
+ --
+Debug PersistentVolume Usage and Mounted Paths: [ Use this to ensure that the volume is correctly mounted and available within the pod. ]
+kubectl describe pv <pv-name> | grep -A5 "Mount Options"
+kubectl exec <pod-name> -- df -h | grep <mount-path>
+ --
+Debugging Stuck Volumes (e.g., Pending state): [ Look for events that indicate why a volume is not attaching or mounting correctly. ]
+kubectl describe pvc <pvc-name> | grep -A10 "Events"
+ --
+Check Cluster-Wide Events for Issues: [ This shows recent events across all namespaces, ordered by creation time, which can surface cluster-wide issues. ]
+kubectl get events --sort-by='.metadata.creationTimestamp' -A
+ --
+Check Node Allocated Resources: [ This provides details about how resources (CPU/Memory) are allocated per node, which can help troubleshoot resource pressure issues. ]
+kubectl describe nodes | grep -A10 "Allocated resources"
+ --
+Detect Resource Quota Violations: [ This can be useful when pods or deployments are not starting due to hitting quota limits. ]
+kubectl describe resourcequotas --all-namespaces
